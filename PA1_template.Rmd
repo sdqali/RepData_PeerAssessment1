@@ -12,14 +12,13 @@ activity$date <- as.Date(activity$date,"%Y-%m-%d")
 
 ## What is mean total number of steps taken per day?
 
-Load libraries
+Load libraries:
 ```{r}
 library(plyr)
 library(ggplot2)
 ```
 
-Aggregate data per day
-
+Aggregate data per day:
 ```{r}
 perDay <- ddply(activity, 
                 "date",
@@ -27,19 +26,19 @@ perDay <- ddply(activity,
                 totalSteps = sum(steps, na.rm = TRUE))
 ```
 
-Compute mean
+Compute mean:
 ```{r}
 meanSteps <- mean(perDay$totalSteps, na.rm = TRUE)
 meanSteps
 ```
 
-Compute median
+Compute median:
 ```{r}
 medianSteps <- median(perDay$totalSteps, na.rm = TRUE)
 medianSteps
 ```
 
-Plot a histogram
+Plot a histogram:
 ```{r}
 qplot(perDay$totalSteps, 
       geom = "histogram", 
@@ -67,14 +66,14 @@ qplot(perDay$totalSteps,
 
 ## What is the average daily activity pattern?
 
-Aggregate by intervals
+Aggregate by intervals:
 ```{r}
 byInterval <- ddply(activity, 
                     "interval",
                     summarise, 
                     mean = mean(steps, na.rm = TRUE), total = sum(steps, na.rm = TRUE))
 ```
-Plot a time series
+Plot a time series:
 ```{r}
 ggplot(data = byInterval, aes(x = interval, y = mean)) +
   geom_line(color = "#97CF84") +
@@ -83,18 +82,49 @@ ggplot(data = byInterval, aes(x = interval, y = mean)) +
   ylab("Average steps")
 ```
 
-Find 5 minute interval with maximum number of steps on average
+Find 5 minute interval with maximum number of steps on average:
 ```{r}
 byInterval[which.max(byInterval$mean), ]
 ```
 
 ## Imputing missing values
 
-Calculate the total number of missing values in the dataset
+Calculate the total number of missing values in the dataset:
 
 ```{r}
 missing <- subset(activity, is.na(steps) | is.na(date) | is.na(interval))
 nrow(missing)
+```
+
+The approach employed in this assignment to impute values is to replace missing values with daily average.
+Find daily average steps to help fill missing values:
+
+```{r}
+dailyMean <- ddply(activity,
+                "date",
+                summarise,
+                meanSteps = mean(steps, na.rm = TRUE))
+```
+Replace mean steps with zero if they are not a number.
+
+```{r}
+dailyMean <- mutate(dailyMean, meanSteps = ifelse(is.nan(meanSteps),
+                                                  0,
+                                                  meanSteps))
+```
+
+Build a look up table for mean steps:
+
+```{r}
+means <- dailyMean$meanSteps
+names(means) <- dailyMean$date
+```
+
+Replace missing values with daily mean:
+```{r}
+activity <- mutate(activity, steps = ifelse(is.na(steps),
+                                            means[as.character(date)],
+                                            steps))
 ```
 
 ## Are there differences in activity patterns between weekdays and weekends?
