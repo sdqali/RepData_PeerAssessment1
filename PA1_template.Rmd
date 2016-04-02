@@ -16,14 +16,18 @@ Load libraries:
 ```{r}
 library(plyr)
 library(ggplot2)
+library(gridExtra)
 ```
 
 Aggregate data per day:
 ```{r}
-perDay <- ddply(activity, 
-                "date",
-                summarise, 
-                totalSteps = sum(steps, na.rm = TRUE))
+dailyTotal <- function(data) {
+  ddply(data,
+        "date",
+        summarise, 
+        totalSteps = sum(steps, na.rm = TRUE))
+}
+perDay <- dailyTotal(activity)
 ```
 
 Compute mean:
@@ -40,46 +44,55 @@ medianSteps
 
 Plot a histogram:
 ```{r}
-qplot(perDay$totalSteps, 
-      geom = "histogram", 
-      bins = 50,
-      main = "Distribution of steps per day",
-      xlab = "Total steps per day",
-      ylab = "Count") +
-  geom_vline(xintercept = meanSteps, colour = "blue") +
-  geom_text(mapping=aes(x = meanSteps,
-                        y = 7,
-                        label = paste("Mean = ", round(meanSteps, digits = 2))),
-            size = 4,
-            angle = 90,
-            vjust = -0.4,
-            hjust = 0) + 
-  geom_vline(xintercept = medianSteps, colour = "green") +
-  geom_text(mapping=aes(x = medianSteps,
-                        y = 7,
-                        label = paste("Median = ", round(medianSteps, digits = 2))),
-            size = 4,
-            angle = 90,
-            vjust = -0.4,
-            hjust = 0)
+plotHistogram <- function(data, mean, median) {
+  qplot(data$totalSteps, 
+        geom = "histogram", 
+        bins = 50,
+        main = "Distribution of steps per day",
+        xlab = "Total steps per day",
+        ylab = "Count") +
+    geom_vline(xintercept = mean, colour = "blue") +
+    geom_text(mapping=aes(x = mean,
+                          y = 7,
+                          label = paste("Mean = ", round(mean, digits = 2))),
+              size = 4,
+              angle = 90,
+              vjust = -0.4,
+              hjust = 0) + 
+    geom_vline(xintercept = median, colour = "green") +
+    geom_text(mapping=aes(x = median,
+                          y = 7,
+                          label = paste("Median = ", round(median, digits = 2))),
+              size = 4,
+              angle = 90,
+              vjust = -0.4,
+              hjust = 0)
+}
+plotHistogram(perDay, meanSteps, medianSteps)
 ```
 
 ## What is the average daily activity pattern?
 
 Aggregate by intervals:
 ```{r}
-byInterval <- ddply(activity, 
-                    "interval",
-                    summarise, 
-                    mean = mean(steps, na.rm = TRUE), total = sum(steps, na.rm = TRUE))
+meanForInterval <- function(data) {
+  ddply(data, 
+        "interval",
+        summarise, 
+        mean = mean(steps, na.rm = TRUE), total = sum(steps, na.rm = TRUE))
+}
+byInterval <- meanForInterval(activity)
 ```
 Plot a time series:
 ```{r}
-ggplot(data = byInterval, aes(x = interval, y = mean)) +
-  geom_line(color = "#97CF84") +
-  ggtitle("Average steps per interval") +
-  xlab("Interval") +
-  ylab("Average steps")
+plotTimeSeries <- function(data, title) {
+  ggplot(data = data, aes(x = interval, y = mean)) +
+    geom_line(color = "#97CF84") +
+    ggtitle(title) +
+    xlab("Interval") +
+    ylab("Average steps")
+}
+plotTimeSeries(byInterval, "Average steps per interval")
 ```
 
 Find 5 minute interval with maximum number of steps on average:
@@ -127,4 +140,54 @@ activity <- mutate(activity, steps = ifelse(is.na(steps),
                                             steps))
 ```
 
+Compute total steps per day after imputing:
+```{r}
+perDay <- dailyTotal(activity)
+```
+
+Compute mean:
+```{r}
+meanSteps <- mean(perDay$totalSteps, na.rm = TRUE)
+meanSteps
+```
+
+Compute median:
+```{r}
+medianSteps <- median(perDay$totalSteps, na.rm = TRUE)
+medianSteps
+```
+
+Create histogram:
+```{r}
+plotHistogram(perDay, meanSteps, medianSteps)
+```
+
+_There are no changes in `mean` or `median`._
+_There is no impact of imputing on total number of steps per day._
+
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Add variable `type.of.day` indicating whether a given date is a weekday or weekend day:
+
+```{r}
+weekendDays <- c("Saturday", "Sunday")
+activity <- mutate(activity, typeOfDay = ifelse(weekdays(date) %in% weekendDays,
+                                                  "weekend",
+                                                  "weekday"))
+activity$typeOfDay = as.factor(activity$typeOfDay)
+```
+
+Aggregate by interval:
+```{r}
+weekDaysByInterval <- meanForInterval(subset(activity, typeOfDay == "weekday"))
+weekEndsByInterval <- meanForInterval(subset(activity, typeOfDay == "weekend"))
+```
+
+Plot:
+```{r}
+p1 <- plotTimeSeries(weekDaysByInterval, "Weekdays")
+p2 <- plotTimeSeries(weekEndsByInterval, "Weekends")
+grid.arrange(p1, p2)
+```
+
+_There are differences in activity pattern between weekdays and weekends_
