@@ -76,10 +76,11 @@ byInterval <- ddply(activity,
 ```
 Plot a time series
 ```{r}
-plot(byInterval$interval,
-     byInterval$mean, 
-     type = "l",
-     ylim = c(0, max(byInterval$mean)))
+ggplot(data = byInterval, aes(x = interval, y = mean)) +
+  geom_line(color = "#97CF84") +
+  ggtitle("Average steps per interval") +
+  xlab("Interval") +
+  ylab("Average steps")
 ```
 
 Find 5 minute interval with maximum number of steps on average
