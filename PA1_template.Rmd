@@ -90,6 +90,11 @@ byInterval[which.max(byInterval$mean), ]
 
 ## Imputing missing values
 
+Calculate the total number of missing values in the dataset
 
+```{r}
+missing <- subset(activity, is.na(steps) | is.na(date) | is.na(interval))
+nrow(missing)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
