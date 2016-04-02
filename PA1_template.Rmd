@@ -4,19 +4,75 @@ output:
   html_document:
     keep_md: true
 ---
-
-
 ## Loading and preprocessing the data
-
-
+```{r}
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(activity$date,"%Y-%m-%d")
+```
 
 ## What is mean total number of steps taken per day?
 
+```{r}
+library(plyr)
+library(ggplot2)
 
+# Aggregate per day
+perDay <- ddply(activity, 
+                "date",
+                summarise, 
+                totalSteps = sum(steps, na.rm = TRUE))
+
+# Compute mean and median
+meanSteps <- mean(perDay$totalSteps, na.rm = TRUE)
+medianSteps <- median(perDay$totalSteps, na.rm = TRUE)
+
+# Plot
+qplot(perDay$totalSteps, 
+      geom = "histogram", 
+      bins = 50,
+      main = "Distribution of steps per day",
+      xlab = "Total steps per day",
+      ylab = "Count") +
+  geom_vline(xintercept = meanSteps, colour = "blue") +
+  geom_text(mapping=aes(x = meanSteps,
+                        y = 7,
+                        label = paste("Mean = ", round(meanSteps, digits = 2))),
+            size = 4,
+            angle = 90,
+            vjust = -0.4,
+            hjust = 0) + 
+  geom_vline(xintercept = medianSteps, colour = "green") +
+  geom_text(mapping=aes(x = medianSteps,
+                        y = 7,
+                        label = paste("Median = ", round(medianSteps, digits = 2))),
+            size = 4,
+            angle = 90,
+            vjust = -0.4,
+            hjust = 0)
+
+
+meanSteps
+medianSteps
+```
 
 ## What is the average daily activity pattern?
 
+```{r}
+# Aggregate by intervals
+byInterval <- ddply(activity, 
+                    "interval",
+                    summarise, 
+                    mean = mean(steps, na.rm = TRUE), total = sum(steps, na.rm = TRUE))
 
+# Plot a time series
+plot(byInterval$interval,
+     byInterval$mean, 
+     type = "l",
+     ylim = c(0, max(byInterval$mean)))
+
+# Find 5 minute interval with maximum number of steps on average
+byInterval[which.max(byInterval$mean), ]
+```
 
 ## Imputing missing values
 
